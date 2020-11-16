@@ -1,8 +1,3 @@
-<?php
-	$mysqli = mysqli_connect("localhost","student_11900456","kQ92NTbPGDBI","student_11900456");
-	$query = "SELECT * FROM sensTest ORDER BY id desc";
-	$result = mysqli_query($mysqli, $query);
-?>
 <html>
 <head>
     <title>Raspberry Pi sensorHat data</title>
@@ -53,28 +48,31 @@
 		</form>
 		</div>
 
-		<div id="table">
-			<div id="table-header" style="max-width:100%; height:50px;" ><h1 id="table-interface" style="padding:10px;">tabel</h1></div>
-			<table class="table table-bordered" >
-				<tr>
-					<th width="5%" >ID</th>
-					<th width="55%" >DATUM</th>
-					<th width="20%" >TEMPERATUUR</th>
-					<th width="20%" >VOCHTIGHEID</th>
-				</tr>
-			<?php while($row = mysqli_fetch_array($result))
-			{
-			?>
-				<tr>
-					<td><?php echo $row["ID"]; ?></td>
-					<td><?php echo $row["date"]; ?></td>
-					<td><?php echo $row["temperature"]; ?></td>
-					<td><?php echo $row["humidity"]; ?></td>
-				</tr>
-			<?php
-			}
-			?>
-			</table>
+		<div id="tabel&filter">
+      <h1>tabel</h1>
+      <p>kies een selectie</p>
+      <select id="filterK" onchange="filterTABEL()">
+        <option>kies kolom</option>
+        <option value="">alle kolomen</option>
+        <option value="temp">temperatuur</option>
+        <option value="hum">vochtigheid</option>
+      </select>
+      <div style="margin-right: 20px;">
+        sorteer op  descending
+        <input type="checkbox" id="desc" value="DESC" onchange="filterTABEL()">
+      </div>
+
+      <br>
+      begin
+      <input type="date" id="date1">
+      <br>
+       einde
+      <input type="date" id="date2">
+      <input type="submit" onclick="filterTABEL()">
+
+
+      <div id="table" class="table-responsive">
+      <p id="userdata"></p>
 	</div>
 	<script type="text/javascript" >
 
@@ -159,21 +157,50 @@
 			},
 		});
 	}
-	//update tabel
-	function updatetable() {
-		$.get("get_table_data.php", function(data) {
-			console.log(data);
-			$("#table").html(data);
-		});
-	}
-	//update tabel en grafiek elke 2 min
+
+	//update grafiek elke 2 min
 	var updateChart = setInterval(function() {
 		$('#myChart').remove();
 		$('#chart-container').append('<canvas id="myChart" width="70%" style="margin-top:30px;" ></canvas>');
 		updatechart();
 	},120000);
-	var updateTable = setInterval( updatetable(), 120000 );
-	//filter tabel op datum
+
+
+  //filter tabel
+  function filterTABEL() {
+
+    if($('#desc').is(":checked")) {
+      $.ajax({
+          type: 'POST',
+          url: 'http://11900456.pxl-ea-ict.be/iotFULL/filterT.php',
+          data: 'filter='+$('#filterK').val()+'&desc='+$('#desc').val()+'&date1='+$('#date1').val()+'&date2='+$('#date2').val(),
+          beforeSend: function(){
+              $('.loading-overlay').show();
+          },
+          success:function(html){
+              $('.loading-overlay').hide();
+              $('#userdata').html(html);
+          }
+      });
+    }
+    //als geen enkele filter is aangeduid gewoon de tabel printen
+    else {
+      $.ajax({
+          type: 'POST',
+          url: 'http://11900456.pxl-ea-ict.be/iotFULL/filterT.php',
+          data: 'filter='+$('#filterK').val()+'&date1='+$('#date1').val()+'&date2='+$('#date2').val(),
+          beforeSend: function(){
+              $('.loading-overlay').show();
+          },
+          success:function(html){
+              $('.loading-overlay').hide();
+              $('#userdata').html(html);
+          }
+      });
+    }
+  }
+
+	//filter grafiek op datum
 	$(document).ready(function() {
 		$.datepicker.setDefaults({
 			dateFormat:'yy-mm-dd'
@@ -187,16 +214,7 @@
 			var from_date = $('#from_date').val();
 			var to_date = $('#to_date').val();
 			if( from_date != '' && to_date != '' ) {
-				/*$.ajax({
-					url: "filter.php",
-					method: "POST",
-					data:{from_date:from_date, to_date:to_date},
-					success:function(data) {
-					console.log( data );
-					clearInterval(updateTable);
-					$('#table').html(data);
-					}
-				});*/
+
 				$.ajax({
 					url: "filter_graph.php",
 					method: "POST",
@@ -213,16 +231,15 @@
 				alert("please select a date!");
 			}
 		});
+
 		//when resume button is pressed
 		$('#resume').click(function() {
 			updatechart();
-			updatetable();
 			updateChart = setInterval(function() {
 			$('#myChart').remove();
 			$('#chart-container').append('<canvas id="myChart" width="70%" style="margin-top:30px;" ></canvas>');
 			updatechart();
 			},120000);
-			updateTable = setInterval( updatetable(), 120000 );
 		});
 	});
 	</script>
